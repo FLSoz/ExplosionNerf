@@ -1,0 +1,9 @@
+{
+  "Id": "Nerf explosion spread",
+  "DisplayName": "Nerfed Explosions",
+  "Author": "FLSoz",
+  "Version": "0.1.0",
+  "Enable": true,
+  "AssemblyName": "ExplosionNerf.dll",
+  "EntryMethod": "ExplosionNerf.IngressPoint.Main"
+}
