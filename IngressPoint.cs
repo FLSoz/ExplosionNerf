@@ -33,6 +33,8 @@ namespace ExplosionNerf
             }
         }
 
+        // Get all blocks the explosion affects
+        // ASSUMPTION: Explosions are handled sequentially on the main thread. i.e. only one Explosion.Explode() is running at any one time
         [HarmonyPatch(typeof(Explosion))]
         [HarmonyPatch("GatherVisibleHits")]
         public static class PatchExplosion
@@ -45,6 +47,7 @@ namespace ExplosionNerf
                 ExplosionNerf.IngressPoint.DebugPrint("<ENM> ", "============================ NEW EXPLOSION ============================");
                 // ExplosionNerf.IngressPoint.DebugPrint("initial");
                 PatchDamage.hitBlock = null;
+                PatchDamage.originalDamage = __instance.m_MaxDamageStrength;
                 PatchExplosion.s_VisibleHits = (IDictionary)PatchExplosion.hitDict.GetValue(null);
                 // ExplosionNerf.IngressPoint.DebugPrint("fetch");
                 PatchDamage.castSource = __instance;
@@ -84,12 +87,14 @@ namespace ExplosionNerf
             }
         }
 
+        // Do the LOS/recursion on explode
         [HarmonyPatch(typeof(ManDamage))]
         [HarmonyPatch("DealDamage")]
         [HarmonyPatch(new Type[] { typeof(Damageable), typeof(float), typeof(ManDamage.DamageType), typeof(Component), typeof(Tank), typeof(Vector3), typeof(Vector3), typeof(float), typeof(float) })]
         public static class PatchDamage
         {
             public static Explosion castSource;
+            public static float originalDamage;
             public static TankBlock hitBlock;
             public static HashSet<TankBlock> YetToHit = new HashSet<TankBlock>();
             public static Dictionary<Tank, HashSet<TankBlock>> DeterminedInvincible = new Dictionary<Tank, HashSet<TankBlock>>();
@@ -110,7 +115,7 @@ namespace ExplosionNerf
             public static bool Prefix(ref ManDamage __instance, ref float __result, ref float damage, ref ManDamage.DamageType damageType, ref Damageable damageTarget, ref Component source, ref Tank sourceTank, ref Vector3 hitPosition, ref Vector3 damageDirection, ref float kickbackStrength, ref float kickbackDuration)
             {
                 // ExplosionNerf.IngressPoint.DebugPrint("ASDF");
-                if (sourceTank != null && hitPosition != default(Vector3) && damageDirection != default(Vector3))
+                if (sourceTank != null && hitPosition != default && damageDirection != default)
                 {
                     TankBlock targetBlock = damageTarget.Block;
                     // ExplosionNerf.IngressPoint.DebugPrint("<ENM> ", "Check 1");
@@ -426,6 +431,23 @@ namespace ExplosionNerf
                 ExplosionNerf.IngressPoint.DebugPrint("<ENM> ", "Dmg Done: " + dmgDone.ToString());
 
                 return dmgDone;
+            }
+        }
+
+        // Restore explosion damage to original after explosion
+        [HarmonyPatch(typeof(Explosion), "Explode")]
+        public static class PatchExplosionDmg
+        {
+            public static void Postfix(ref Explosion __instance)
+            {
+                if (__instance == PatchDamage.castSource)
+                {
+                    __instance.m_MaxDamageStrength = PatchDamage.originalDamage;
+                }
+                else
+                {
+                    Console.WriteLine("<ENM> ERROR: EXPLOSIONS NOT EQUAL");
+                }
             }
         }
 
