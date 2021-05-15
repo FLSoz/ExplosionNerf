@@ -452,7 +452,7 @@ namespace ExplosionNerf
         }
 
         // Do the high damage penetration bits
-        [HarmonyPatch(typeof(Projectile))]
+        /* [HarmonyPatch(typeof(Projectile))]
         [HarmonyPatch("OnCollisionEnter")]
         public static class PatchProjectile
         {
@@ -498,10 +498,6 @@ namespace ExplosionNerf
                 }
                 DebugPrint("[ENF-AP] ", "Stage 3");
                 bool singleImpact = (bool)PatchProjectile.m_SingleImpact.GetValue(__instance);
-                /* if ((bool) PatchProjectile.m_SingleImpact.GetValue(__instance) && (bool) PatchProjectile.m_HasSetCollisionDeathDelay.GetValue(__instance))
-                {
-                    return 0;
-                } */
                 bool flag = false;
                 DebugPrint("[ENF-AP] ", "Stage 4");
 
@@ -691,7 +687,7 @@ namespace ExplosionNerf
                 }
                 return true;
             }
-        }
+        } */
 
         public static void Main()
         {
