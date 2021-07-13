@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 using System.Reflection;
-using Harmony;
+using HarmonyLib;
 using UnityEngine;
 using System.Collections;
 
@@ -453,7 +453,7 @@ namespace ExplosionNerf
 
         public static void Main()
         {
-            HarmonyInstance.Create("flsoz.ttmm.explosionnerf.mod").PatchAll(Assembly.GetExecutingAssembly());
+            new Harmony("flsoz.ttmm.explosionnerf.mod").PatchAll(Assembly.GetExecutingAssembly());
         }
     }
 }
