@@ -1,9 +1,0 @@
-{
-  "Id": "Nerf explosion spread",
-  "DisplayName": "Rebalanced Explosions",
-  "Author": "FLSoz",
-  "Version": "0.2.0",
-  "Enable": true,
-  "AssemblyName": "ExplosionNerf.dll",
-  "EntryMethod": "ExplosionNerf.IngressPoint.Main"
-}
