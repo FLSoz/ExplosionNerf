@@ -10,16 +10,17 @@ using HarmonyLib;
 
 namespace ExplosionNerf
 {
-
-    public class IngressPoint : ModBase
+    public static class IngressPoint
+    {
+        public static void Main()
+        {
+            ExplosionNerfMod.harmony.PatchAll(Assembly.GetExecutingAssembly());
+        }
+    }
+    public class ExplosionNerfMod : ModBase
     {
         const string HarmonyID = "flsoz.ttmm.explosionnerf.mod";
         internal static Harmony harmony = new Harmony(HarmonyID);
-
-        public static void Main()
-        {
-            harmony.PatchAll(Assembly.GetExecutingAssembly());
-        }
 
         public override bool HasEarlyInit()
         {
@@ -66,7 +67,7 @@ namespace ExplosionNerf
 
         public override void Init()
         {
-            Main();
+            IngressPoint.Main();
         }
     }
 }
