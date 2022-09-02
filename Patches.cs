@@ -107,7 +107,7 @@ namespace ExplosionNerf
             private static FieldInfo m_CabDamageDissipationDetachFactor = typeof(ManDamage).GetField("m_CabDamageDissipationDetachFactor", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
             private static FieldInfo s_AdjacentBlocks = typeof(ManDamage).GetField("s_AdjacentBlocks", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
 
-            public static bool Prefix(ref ManDamage __instance, ref float __result, ref float damage, ref ManDamage.DamageType damageType, ref Damageable damageTarget, ref Component source, ref Tank sourceTank, ref Vector3 hitPosition, ref Vector3 damageDirection, ref float kickbackStrength, ref float kickbackDuration)
+            public static bool Prefix(ref ManDamage __instance, ref float __result, ref Damageable damageTarget, ref float damage, ref ManDamage.DamageType damageType, ref Component source, ref Tank sourceTank, ref Vector3 hitPosition, ref Vector3 damageDirection, ref float kickbackStrength, ref float kickbackDuration)
             {
                 // DebugPrint("ASDF");
                 if (sourceTank != null && hitPosition != default && damageDirection != default)
