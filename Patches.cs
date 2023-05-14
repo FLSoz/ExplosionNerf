@@ -34,7 +34,7 @@ namespace ExplosionNerf
         [HarmonyPatch("GatherVisibleHits")]
         public static class PatchExplosion
         {
-            private static FieldInfo hitDict = typeof(Explosion).GetField("s_VisibleHits", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            private static readonly FieldInfo hitDict = AccessTools.Field(typeof(Explosion), "s_VisibleHits");
             private static IDictionary s_VisibleHits;
 
             public static void Postfix(ref Explosion __instance)
@@ -42,6 +42,7 @@ namespace ExplosionNerf
                 DebugPrint("<ENM> ", "============================ NEW EXPLOSION ============================");
                 // DebugPrint("initial");
                 PatchDamage.hitBlock = null;
+                PatchDamage.hitShield = null;
                 PatchDamage.originalDamage = __instance.m_MaxDamageStrength;
                 PatchExplosion.s_VisibleHits = (IDictionary)PatchExplosion.hitDict.GetValue(null);
                 // DebugPrint("fetch");
@@ -50,9 +51,16 @@ namespace ExplosionNerf
                 {
                     Damageable directHit = (Damageable)PatchDamage.DirectHit.GetValue(__instance);
                     // if (directHit != null && directHit.Block != null && (directHit.MaxHealth >= 1.0f || directHit.Block.GetComponent<ModuleShieldGenerator>() == null))
-                    if (directHit != null && directHit.Block != null && directHit.Block.tank != null && directHit.Block.visible.damageable == directHit)
-                    {
-                        PatchDamage.hitBlock = directHit.Block;
+                    if (directHit != null) {
+                        if (directHit.Block != null && directHit.Block.tank != null && directHit.Block.visible.damageable == directHit)
+                        {
+                            PatchDamage.hitBlock = directHit.Block;
+                        }
+                        else if (directHit.m_DamageableType == ManDamage.DamageableType.Shield && directHit.Block != null && directHit.Block.visible.damageable != directHit)
+                        {
+                            // we have hit a shield, mark it
+                            PatchDamage.hitShield = directHit;
+                        }
                     }
 
                     // DebugPrint("condition");
@@ -91,40 +99,67 @@ namespace ExplosionNerf
             public static Explosion castSource;
             public static float originalDamage;
             public static TankBlock hitBlock;
+            public static Damageable directHit;
+            public static Damageable hitShield;
             public static HashSet<TankBlock> YetToHit = new HashSet<TankBlock>();
             public static Dictionary<Tank, HashSet<TankBlock>> DeterminedInvincible = new Dictionary<Tank, HashSet<TankBlock>>();
 
-            public static FieldInfo DirectHit = typeof(Explosion).GetField("m_DirectHitTarget", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            private static FieldInfo m_AoEDamageBlockPercent = typeof(Damageable).GetField("m_AoEDamageBlockPercent", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            private static FieldInfo m_DamageType = typeof(Explosion).GetField("m_DamageType", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            private static FieldInfo m_DamageSource = typeof(Explosion).GetField("m_DamageSource", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            public static readonly FieldInfo DirectHit = AccessTools.Field(typeof(Explosion), "m_DirectHitTarget");
+            private static readonly FieldInfo m_AoEDamageBlockPercent = AccessTools.Field(typeof(Damageable), "m_AoEDamageBlockPercent");
+            private static readonly FieldInfo m_DamageType = AccessTools.Field(typeof(Explosion), "m_DamageType");
+            private static readonly FieldInfo m_DamageSource = AccessTools.Field(typeof(Explosion), "m_DamageSource");
 
-            private static FieldInfo m_ExplodeCountdownTimer = typeof(ModuleDamage).GetField("m_ExplodeCountdownTimer", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            // private static FieldInfo rejectDamageEvent = typeof(Damageable).GetField("rejectDamageEvent", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            private static readonly FieldInfo m_ExplodeCountdownTimer = AccessTools.Field(typeof(ModuleDamage), "m_ExplodeCountdownTimer");
+            // private static readonly FieldInfo rejectDamageEvent = AccessTools.Field(typeof(Damageable), "rejectDamageEvent");
 
-            private static FieldInfo m_DamageMultiplierTable = typeof(ManDamage).GetField("m_DamageMultiplierTable", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            private static FieldInfo m_CabDamageDissipationFactor = typeof(ManDamage).GetField("m_CabDamageDissipationFactor", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            private static FieldInfo m_CabDamageDissipationDetachFactor = typeof(ManDamage).GetField("m_CabDamageDissipationDetachFactor", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            private static FieldInfo s_AdjacentBlocks = typeof(ManDamage).GetField("s_AdjacentBlocks", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            private static readonly FieldInfo m_DamageMultiplierTable = AccessTools.Field(typeof(ManDamage), "m_DamageMultiplierTable");
+            private static readonly FieldInfo m_CabDamageDissipationFactor = AccessTools.Field(typeof(ManDamage), "m_CabDamageDissipationFactor");
+            private static readonly FieldInfo m_CabDamageDissipationDetachFactor = AccessTools.Field(typeof(ManDamage), "m_CabDamageDissipationDetachFactor");
+            private static readonly FieldInfo s_AdjacentBlocks = AccessTools.Field(typeof(ManDamage), "s_AdjacentBlocks");
 
-            public static bool Prefix(ref ManDamage __instance, ref float __result, ref Damageable damageTarget, ref float damage, ref ManDamage.DamageType damageType, ref Component source, ref Tank sourceTank, ref Vector3 hitPosition, ref Vector3 damageDirection, ref float kickbackStrength, ref float kickbackDuration)
+            public static bool Prefix(ManDamage __instance, ref float __result, Damageable damageTarget, float damage, ManDamage.DamageType damageType, Component source, Tank sourceTank, Vector3 hitPosition, Vector3 damageDirection, float kickbackStrength, float kickbackDuration)
             {
                 // DebugPrint("ASDF");
-                if (sourceTank != null && hitPosition != default && damageDirection != default)
+                if (hitShield != null)
                 {
-                    TankBlock targetBlock = damageTarget.Block;
-                    // DebugPrint("<ENM> ", "Check 1");
-                    if (targetBlock != null && source != null && source.GetType() == typeof(Explosion))
+                    if (hitShield != damageTarget)
                     {
-                        // DebugPrint("<ENM> ", "Check 2");
-                        Damageable directHit = PatchDamage.hitBlock == null ? null : (Damageable)PatchDamage.DirectHit.GetValue(source);
-                        Tank targetTank = targetBlock.tank;
-                        if (targetTank != null && targetTank != sourceTank && targetTank.Team != sourceTank.Team)
+                        __result = 0f;
+                    }
+                    else
+                    {
+                        ManDamage.DamageInfo damageInfo = new ManDamage.DamageInfo(
+                            damage,
+                            damageType,
+                            source,
+                            sourceTank,
+                            hitPosition,
+                            damageDirection,
+                            kickbackStrength,
+                            kickbackDuration
+                        );
+                        __result = DoDamage(__instance, null, damageTarget, damageInfo);
+                    }
+                    return false;
+                }
+                else
+                {
+                    if (sourceTank != null && hitPosition != default && damageDirection != default)
+                    {
+                        TankBlock targetBlock = damageTarget.Block;
+                        // DebugPrint("<ENM> ", "Check 1");
+                        if (targetBlock != null && source != null && source.GetType() == typeof(Explosion))
                         {
-                            // DebugPrint("<ENM> ", "Check 3");
-                            // ManDamage.DamageInfo damageInfo = new ManDamage.DamageInfo(damage, damageType, source, sourceTank, hitPosition, damageDirection, kickbackStrength, kickbackDuration);
-                            __result = recursiveHandleDamage(ref __instance, ref __result, damageTarget, directHit, source, targetBlock, targetTank, "<ENM> ");
-                            return false;
+                            // DebugPrint("<ENM> ", "Check 2");
+                            Damageable directHit = PatchDamage.hitBlock == null ? null : (Damageable)PatchDamage.DirectHit.GetValue(source);
+                            Tank targetTank = targetBlock.tank;
+                            if (targetTank != null && targetTank != sourceTank && targetTank.Team != sourceTank.Team)
+                            {
+                                // DebugPrint("<ENM> ", "Check 3");
+                                // ManDamage.DamageInfo damageInfo = new ManDamage.DamageInfo(damage, damageType, source, sourceTank, hitPosition, damageDirection, kickbackStrength, kickbackDuration);
+                                __result = recursiveHandleDamage(__instance, ref __result, damageTarget, directHit, source, targetBlock, targetTank, "<ENM> ");
+                                return false;
+                            }
                         }
                     }
                 }
@@ -151,7 +186,7 @@ namespace ExplosionNerf
                 return new ManDamage.DamageInfo(damage, (ManDamage.DamageType)PatchDamage.m_DamageType.GetValue(PatchDamage.castSource), (Component)PatchDamage.castSource, (Tank)PatchDamage.m_DamageSource.GetValue(PatchDamage.castSource), targetBlock.transform.position, damageDirection, 0.0f, 0.0f);
             }
 
-            private static float recursiveHandleDamage(ref ManDamage __instance, ref float __result, Damageable damageTarget, Damageable directHit, Component source, TankBlock targetBlock, Tank targetTank, string prefix, bool RecurseOverride = false)
+            private static float recursiveHandleDamage(ManDamage __instance, ref float __result, Damageable damageTarget, Damageable directHit, Component source, TankBlock targetBlock, Tank targetTank, string prefix, bool RecurseOverride = false)
             {
                 if (RecurseOverride || PatchDamage.YetToHit.Contains(targetBlock))
                 {
@@ -183,7 +218,7 @@ namespace ExplosionNerf
 
                             ManDamage.DamageInfo damageInfo = PatchDamage.NewDamageInfo(directHit, damageTarget, targetBlock);
                             DebugPrint(prefix, "Damage: " + damageInfo.Damage.ToString());
-                            float dmgDone = PatchDamage.DoDamage(ref __instance, directHit, damageTarget, damageInfo);
+                            float dmgDone = PatchDamage.DoDamage(__instance, directHit, damageTarget, damageInfo);
                             if (dmgDone == 0.0f)
                             {
                                 DebugPrint(prefix, "Block NOT destroyed - mark invincible for now");
@@ -211,7 +246,7 @@ namespace ExplosionNerf
                         else
                         {
                             DebugPrint(prefix, "Resolve Direct hit first");
-                            float destroyed = PatchDamage.recursiveHandleDamage(ref __instance, ref __result, directHit, directHit, source, localHitBlock, targetTank, prefix + "|  ", true);
+                            float destroyed = PatchDamage.recursiveHandleDamage(__instance, ref __result, directHit, directHit, source, localHitBlock, targetTank, prefix + "|  ", true);
 
                             // if block was actually destroyed
                             if (destroyed != 0.0f)
@@ -221,7 +256,7 @@ namespace ExplosionNerf
                                 DebugPrint(prefix, "Resolve NOT NECESSARILY invincible - calculate dmg (re-recurse)");
                                 PatchDamage.YetToHit.Add(targetBlock);
                                 directHit = (Damageable)PatchDamage.DirectHit.GetValue(source);
-                                return PatchDamage.recursiveHandleDamage(ref __instance, ref __result, damageTarget, directHit, source, targetBlock, targetTank, prefix + "|  ");
+                                return PatchDamage.recursiveHandleDamage(__instance, ref __result, damageTarget, directHit, source, targetBlock, targetTank, prefix + "|  ");
                             }
                             else
                             {
@@ -285,7 +320,7 @@ namespace ExplosionNerf
                             {
                                 if (PatchDamage.YetToHit.Contains(block))
                                 {
-                                    float destroyed = PatchDamage.recursiveHandleDamage(ref __instance, ref __result, block.GetComponent<Damageable>(), directHit, source, block, targetTank, prefix + "|  ");
+                                    float destroyed = PatchDamage.recursiveHandleDamage(__instance, ref __result, block.GetComponent<Damageable>(), directHit, source, block, targetTank, prefix + "|  ");
 
                                     if (destroyed == 0.0f)
                                     {
@@ -310,7 +345,7 @@ namespace ExplosionNerf
                                 DebugPrint(prefix, "(A) [Should be rare] Resolve NOT invincible - calculate dmg");
                                 ManDamage.DamageInfo damageInfo = PatchDamage.NewDamageInfo(directHit, damageTarget, targetBlock);
                                 DebugPrint(prefix, "Damage: " + damageInfo.Damage.ToString());
-                                float dmgDone = PatchDamage.DoDamage(ref __instance, directHit, damageTarget, damageInfo);
+                                float dmgDone = PatchDamage.DoDamage(__instance, directHit, damageTarget, damageInfo);
                                 if (dmgDone == 0.0f)
                                 {
                                     DebugPrint(prefix, "Block NOT destroyed - mark invincible for now");
@@ -337,7 +372,7 @@ namespace ExplosionNerf
                             DebugPrint(prefix, "No blocks in way - Resolve NOT invincible - calculate dmg");
                             ManDamage.DamageInfo damageInfo = PatchDamage.NewDamageInfo(directHit, damageTarget, targetBlock);
                             DebugPrint(prefix, "Damage: " + damageInfo.Damage.ToString());
-                            float dmgDone = PatchDamage.DoDamage(ref __instance, directHit, damageTarget, damageInfo);
+                            float dmgDone = PatchDamage.DoDamage(__instance, directHit, damageTarget, damageInfo);
                             if (dmgDone == 0.0f)
                             {
                                 DebugPrint(prefix, "Block NOT destroyed - mark invincible for now");
@@ -359,7 +394,7 @@ namespace ExplosionNerf
                 return 0.0f;
             }
 
-            private static float DoDamage(ref ManDamage __instance, Damageable directHit, Damageable damageTarget, ManDamage.DamageInfo damageInfo)
+            private static float DoDamage(ManDamage __instance, Damageable directHit, Damageable damageTarget, ManDamage.DamageInfo damageInfo)
             {
                 DebugPrint("<ENM> ", "Doing DMG");
 
