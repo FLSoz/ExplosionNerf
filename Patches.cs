@@ -120,13 +120,10 @@ namespace ExplosionNerf
             public static bool Prefix(ManDamage __instance, ref float __result, Damageable damageTarget, float damage, ManDamage.DamageType damageType, Component source, Tank sourceTank, Vector3 hitPosition, Vector3 damageDirection, float kickbackStrength, float kickbackDuration)
             {
                 // DebugPrint("ASDF");
+                // If we hit a shield, ensure we actually do damage to the shield
                 if (hitShield != null)
                 {
-                    if (hitShield != damageTarget)
-                    {
-                        __result = 0f;
-                    }
-                    else
+                    if (hitShield == damageTarget)
                     {
                         ManDamage.DamageInfo damageInfo = new ManDamage.DamageInfo(
                             damage,
@@ -139,27 +136,25 @@ namespace ExplosionNerf
                             kickbackDuration
                         );
                         __result = DoDamage(__instance, null, damageTarget, damageInfo);
+                        return false;
                     }
-                    return false;
                 }
-                else
+                // We still apply splash damage even when hitting a shield
+                if (sourceTank != null && hitPosition != default && damageDirection != default)
                 {
-                    if (sourceTank != null && hitPosition != default && damageDirection != default)
+                    TankBlock targetBlock = damageTarget.Block;
+                    // DebugPrint("<ENM> ", "Check 1");
+                    if (targetBlock != null && source != null && source.GetType() == typeof(Explosion))
                     {
-                        TankBlock targetBlock = damageTarget.Block;
-                        // DebugPrint("<ENM> ", "Check 1");
-                        if (targetBlock != null && source != null && source.GetType() == typeof(Explosion))
+                        // DebugPrint("<ENM> ", "Check 2");
+                        Damageable directHit = PatchDamage.hitBlock == null ? null : (Damageable)PatchDamage.DirectHit.GetValue(source);
+                        Tank targetTank = targetBlock.tank;
+                        if (targetTank != null && targetTank != sourceTank && targetTank.Team != sourceTank.Team)
                         {
-                            // DebugPrint("<ENM> ", "Check 2");
-                            Damageable directHit = PatchDamage.hitBlock == null ? null : (Damageable)PatchDamage.DirectHit.GetValue(source);
-                            Tank targetTank = targetBlock.tank;
-                            if (targetTank != null && targetTank != sourceTank && targetTank.Team != sourceTank.Team)
-                            {
-                                // DebugPrint("<ENM> ", "Check 3");
-                                // ManDamage.DamageInfo damageInfo = new ManDamage.DamageInfo(damage, damageType, source, sourceTank, hitPosition, damageDirection, kickbackStrength, kickbackDuration);
-                                __result = recursiveHandleDamage(__instance, ref __result, damageTarget, directHit, source, targetBlock, targetTank, "<ENM> ");
-                                return false;
-                            }
+                            // DebugPrint("<ENM> ", "Check 3");
+                            // ManDamage.DamageInfo damageInfo = new ManDamage.DamageInfo(damage, damageType, source, sourceTank, hitPosition, damageDirection, kickbackStrength, kickbackDuration);
+                            __result = recursiveHandleDamage(__instance, ref __result, damageTarget, directHit, source, targetBlock, targetTank, "<ENM> ");
+                            return false;
                         }
                     }
                 }
@@ -239,7 +234,7 @@ namespace ExplosionNerf
                             // damageInfo.ApplyDamageMultiplier(newDamageMult);
 
                             // modify dmg energy left in explosion
-                            castSource.m_MaxDamageStrength *= (float)PatchDamage.m_AoEDamageBlockPercent.GetValue(directHit);
+                            castSource.m_MaxDamageStrength *= 1.0f - (float)PatchDamage.m_AoEDamageBlockPercent.GetValue(directHit);
                             // PatchDamage.DirectHit.SetValue(source, null);
                             return dmgDone;
                         }
