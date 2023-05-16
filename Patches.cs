@@ -189,7 +189,7 @@ namespace ExplosionNerf
                     DebugPrint("\n" + prefix, "Resolving Block: " + targetBlock.name);
                     PatchDamage.YetToHit.Remove(targetBlock);
 
-                    if (directHit != null)
+                    if (directHit != null && directHit.Health > 0)
                     {
                         DebugPrint(prefix, "direct hit detected");
                         TankBlock localHitBlock = directHit.Block;
@@ -459,7 +459,7 @@ namespace ExplosionNerf
                 return dmgDone;
             }
         }
-
+        
         // Restore explosion damage to original after explosion
         [HarmonyPatch(typeof(Explosion), "Explode")]
         public static class PatchExplosionDmg

@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 
 using System.Reflection;
 using HarmonyLib;
+using static CompoundExpression.EEInstance;
+using UnityEngine;
 
 
 namespace ExplosionNerf
@@ -21,6 +23,7 @@ namespace ExplosionNerf
     {
         const string HarmonyID = "flsoz.ttmm.explosionnerf.mod";
         internal static Harmony harmony = new Harmony(HarmonyID);
+        internal static Logger logger;
 
         public override bool HasEarlyInit()
         {
@@ -32,6 +35,7 @@ namespace ExplosionNerf
         {
             if (!Inited)
             {
+                logger = new Logger("ExplosionNerfMod");
                 string logLevelMod = CommandLineReader.GetArgument("+log_level_ExplosionNerf");
                 string logLevelGeneral = CommandLineReader.GetArgument("+log_level");
                 string logLevel = logLevelGeneral;
