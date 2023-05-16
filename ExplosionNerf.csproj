@@ -32,6 +32,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="IngressPoint.cs" />
+    <Compile Include="Logger.cs" />
     <Compile Include="Patches.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -99,26 +100,7 @@ if not "$(TargetFileName)" == "LogManager.dll" (
 if not "$(TargetFileName)" == "LogManager.dll" (
   del "LogManager.dll"
 )
-
-echo Copying to Combat Overhaul
-set modname=CombatOverhaul
-set modpath="E:\Steam\steamapps\common\TerraTech\LocalMods\%25modname%25\"
-set unitypath="E:\Documents\Unity\Projects\TT Modding\Assets\Mods\%25modname%25\"
-echo Copying to game
-xcopy /S /Y /R "$(TargetFileName)" !modpath!
-if not "$(TargetFileName)" == "LogManager.dll" (
-  xcopy /S /Y /R "LogManager.dll" !modpath!
-)
-
-echo Copying to Unity
-xcopy /S /Y /R "$(TargetFileName)" !unitypath!
-if not "$(TargetFileName)" == "LogManager.dll" (
-  xcopy /S /Y /R "LogManager.dll" !unitypath!
-)
-
-if not "$(TargetFileName)" == "LogManager.dll" (
-  del "LogManager.dll"
-)</PostBuildEvent>
+</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
