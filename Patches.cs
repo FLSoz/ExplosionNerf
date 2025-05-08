@@ -436,7 +436,7 @@ namespace ExplosionNerf
                         damageInfo1.ApplyDamageMultiplier((float)(1.0 - (double)multiplier * (double)adjCount));
                     }
                 }
-                dmgDone = damageTarget.TryToDamage(damageInfo1, true);
+                dmgDone = damageTarget.TryToDamage(damageInfo1, true, false);
 
                 //  || damageTarget.Block == null || damageTarget.Block.tank == null
                 if (dmgDone == 0.0)
